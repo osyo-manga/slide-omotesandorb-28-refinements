@@ -147,7 +147,7 @@ end
 
 ```ruby
 # まず、module を定義する
-module Ex
+module StringTwice
     # Module#refine を使用して任意のクラスに対してメソッドを定義する
 	refine String do
 		# 通常と同じようにメソッドを定義する
@@ -171,7 +171,7 @@ end
 - - -
 
 ```ruby
-module Ex
+module StringTwice
 	refine String do
 		def twice
 			self + self
@@ -185,7 +185,7 @@ end
 
 
 # using に拡張するモジュール渡すことでそのファイル全体で使えるようになります
-using Ex
+using StringTwice
 
 p "homu".twice   # => "homuhomu"
 ```
@@ -196,13 +196,13 @@ p "homu".twice   # => "homuhomu"
 - - -
 
 ```ruby
-module Ex
+module StringTwice
     # ...
 end
 
 class X
 	# このクラス内で String#twice を呼び出すことが出来る
-	using Ex
+	using StringTwice
 
 	def func x
 		x.twice + x.twice
@@ -219,7 +219,131 @@ p X.new.func "homu"
 
 ---
 
-## 注意点
+## Refinements を使う時の小技
+
+---
+---
+
+## 要求
+- - -
+gem でクラス拡張を行う場合 Refinements 化したクラス拡張と通常のクラス拡張の両方実装したい
+
+* require "string/twice" した場合は using StringTwice で利用する             <!-- .element: class="fragment" -->
+* require "string/twice/core_ext" した場合は using を行わないで利用する             <!-- .element: class="fragment" -->
+* これらを使い分けたい              <!-- .element: class="fragment" -->
+
+>>>
+
+#### 実装イメージ
+- - -
+
+#### "string/twice.rb"
+- - -
+
+```ruby
+module StringTwice
+	refine String do
+		def twice
+			self + self
+		end
+	end
+end
+```
+
+#### "string/twice/core_ext.rb"
+- - -
+
+```ruby
+class String
+	def twice
+		self + self
+	end
+end
+```
+
+---
+
+# 問題点
+
+---
+
+```ruby
+module StringTwice
+	refine String do
+		def twice
+			self + self
+		end
+	end
+end
+```
+
+```ruby
+class String
+	def twice
+		self + self
+	end
+end
+```
+
+- - -
+
+```ruby
+def twice
+    self + self
+end
+```
+
+が重複してる!!!
+
+---
+
+## 解決策
+
+---
+
+## 実装を module に切りだそう
+
+>>>
+
+#### "string/twice.rb"
+- - -
+
+```ruby
+module StringTwice
+	def twice
+		self + self
+	end
+
+	refine String do
+		include StringTwice
+	end
+end
+```
+
+#### "string/twice/core_ext.rb"
+- - -
+
+```ruby
+require "string/twice"
+
+class String
+	include StringTwice
+end
+```
+
+>>>
+
+## これにより
+- - -
+
+* require "string/twice" した場合は using StringTwice で利用する             <!-- .element: class="fragment" -->
+* require "string/twice/core_ext" した場合は using を行わないで利用する             <!-- .element: class="fragment" -->
+* include StringTwice で任意のクラスに mixin することも出来る           <!-- .element: class="fragment" -->
+
+
+---
+
+## Refinements 注意点
 - - -
 * Module オブジェクトに対して refine できない    <!-- .element: class="fragment" -->
   * → Ruby 2.4 で対応された                         <!-- .element: class="fragment" -->
@@ -229,7 +353,7 @@ p X.new.func "homu"
 
 >>>
 
-## 注意点 2
+## Refinements 注意点 2
 - - -
 * #respond_to? は false          <!-- .element: class="fragment" -->
   * "homu".respond_to? :twice # => false
@@ -241,9 +365,9 @@ p X.new.func "homu"
 ## まとめ
 - - -
 
-* クラス拡張は影響する範囲が大きい
-* クラス拡張を行う際は Refinements を使用して範囲を明示化しよう
-* 基本的には using したスコープでのみ、そのメソッドが呼べる、と認識しておいたほうがよい
+* クラス拡張は影響する範囲が大きい   <!-- .element: class="fragment" -->
+* クラス拡張を行う際は Refinements を使用して範囲を明示化しよう   <!-- .element: class="fragment" -->
+* 基本的には using したスコープでのみ、そのメソッドが呼べる、と認識しておいたほうがよい   <!-- .element: class="fragment" -->
 
 ---
 
