@@ -1,7 +1,6 @@
 # 表参道.rb #28 ~gem~
 - - -
 ## Refinements を使おう
-# TEst
 
 ---
 
