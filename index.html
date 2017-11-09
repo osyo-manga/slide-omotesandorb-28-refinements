@@ -48,14 +48,25 @@
           { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.5.0/plugin/markdown/markdown.min.js', },
           // NOTE: removed "condition: function() { return !!document.querySelector( 'pre code' ); }"
           // cf. https://github.com/hakimel/reveal.js/issues/1225
+//           {
+//             src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.5.0/plugin/highlight/highlight.min.js',
+//             async: true,
+//             callback: function() { hljs.initHighlightingOnLoad(); }
+//           },
           {
-            src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.5.0/plugin/highlight/highlight.min.js',
+            src: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js',
             async: true,
-            callback: function() { hljs.initHighlightingOnLoad(); }
           },
           {
             src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.5.0/plugin/notes/notes.min.js',
             async: true
+          },
+          {
+            src: 'https://cdn.jsdelivr.net/npm/reveal-code-focus@1.0.0/reveal-code-focus.min.js',
+            async: true,
+            callback: function() {
+              RevealCodeFocus();
+            }
           }
         ]
       });

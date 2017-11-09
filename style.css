@@ -10,3 +10,15 @@
 .reveal pre code {
     max-height: 800px;
 }
+
+
+.line { display: block; }
+.line.hover { background: yellow; }
+/* include a highlight.js theme and modify it */
+/* ... */
+/* on focused: switch to solarized dark */
+.line.focus { background: #002b36; color: #839496; }
+.line.focus .hljs-comment, .line.focus .hljs-quote { color: #586e75; }
+/* ... */
+
+

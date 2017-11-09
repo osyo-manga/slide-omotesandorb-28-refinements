@@ -69,21 +69,21 @@
 
 #### クラス拡張とは
 - - -
-クラス拡張とは定義済みのクラスに対して新しいメソッドや既存のメソッドを書き換えることです。 
+クラス拡張とは定義済みのクラスに対して新しいメソッドや既存のメソッドを書き換えること。 
 
 ```ruby
 # String をクラス拡張する例
-# String#twice メソッドを新たに追加する
 class String
 	def twice
 		self + self
 	end
 end
 
-# String のインスタンスオブジェクトに対して
-# 定義したメソッドが呼べる
 p "homu".twice # => "homuhomu"
 ```
+
+* 既存のクラスに対して新しいメソッドを定義する  <!-- .element: class="fragment" data-code-focus="3-5" -->
+* 定義したメソッドが呼べる <!-- .element: class="fragment" data-code-focus="8" -->
 
 ---
 
@@ -123,7 +123,6 @@ Ruby 2.0 で実験的に導入され、Ruby 2.1 で正式に導入されまし�
 ---
 
 ## Refinements 化する
-## ライブコーディング
 
 ↓ ↓ ↓
 >>>
@@ -146,11 +145,8 @@ end
 - - -
 
 ```ruby
-# まず、module を定義する
 module StringTwice
-    # Module#refine を使用して任意のクラスに対してメソッドを定義する
 	refine String do
-		# 通常と同じようにメソッドを定義する
 		def twice
 			self + self
 		end
@@ -158,13 +154,16 @@ module StringTwice
 end
 ```
 
+1. 基点となるモジュールを定義する <!-- .element: class="fragment" data-code-focus="1" -->
+2. refine に拡張するクラスを渡す <!-- .element: class="fragment" data-code-focus="2" -->
+3. 新しいメソッドを定義する <!-- .element: class="fragment" data-code-focus="3-5" -->
+
+
 ---
 
 ## Refinements 呼び出す
-## ライブコーディング
 
 ↓ ↓ ↓
-
 >>>
 
 #### Refinements を使う(トップレベル)
@@ -179,16 +178,23 @@ module StringTwice
 	end
 end
 
-# Module#refine で定義しただけでは反映されない
+# Module#refine で定義しただけではメソッド呼び出せない
 # Error: undefined method `twice' for "homu":String (NoMethodError)
 "homu".twice
 
-
-# using に拡張するモジュール渡すことでそのファイル全体で使えるようになります
+# using にモジュールを渡すことで、
+# 定義した refine がそのファイル全体で使えるようになる
 using StringTwice
 
 p "homu".twice   # => "homuhomu"
 ```
+
+
+<span class="code-presenting-annotation fragment current-only" data-code-focus="11"></span>
+<span class="code-presenting-annotation fragment current-only" data-code-focus="15-17"></span>
+
+* ポイント：影響するのはそのファイルだけで他のファイルには影響しない  <!-- .element: class="fragment" -->
+
 
 >>>
 
@@ -201,10 +207,11 @@ module StringTwice
 end
 
 class X
-	# このクラス内で String#twice を呼び出すことが出来る
+	# クラス内で using する
 	using StringTwice
 
 	def func x
+        # そのクラス内でメソッドが呼び出せる
 		x.twice + x.twice
 	end
 end
@@ -217,30 +224,32 @@ p X.new.func "homu"
 "homu".twice   # Error
 ```
 
+<span class="code-presenting-annotation fragment current-only" data-code-focus="7"></span>
+<span class="code-presenting-annotation fragment current-only" data-code-focus="11,15"></span>
+<span class="code-presenting-annotation fragment current-only" data-code-focus="20"></span>
+
 ---
 
-## Refinements を使う時の小技
+### gem で Refinements を使う時の小技
 
----
 ---
 
 ## 要求
 - - -
-gem でクラス拡張を行う場合 Refinements 化したクラス拡張と通常のクラス拡張の両方実装したい
+クラス拡張を行う gem をつくたい場合、 Refinements 化したクラス拡張と通常のクラス拡張の両方実装したい   <!-- .element: class="fragment" -->
 
 * require "string/twice" した場合は using StringTwice で利用する             <!-- .element: class="fragment" -->
 * require "string/twice/core_ext" した場合は using を行わないで利用する             <!-- .element: class="fragment" -->
-* これらを使い分けたい              <!-- .element: class="fragment" -->
+* これらをユーザ側で使い分けたい              <!-- .element: class="fragment" -->
 
+↓ ↓ ↓
 >>>
 
 #### 実装イメージ
 - - -
 
-#### "string/twice.rb"
-- - -
-
 ```ruby
+# "string/twice.rb"
 module StringTwice
 	refine String do
 		def twice
@@ -250,10 +259,10 @@ module StringTwice
 end
 ```
 
-#### "string/twice/core_ext.rb"
 - - -
 
 ```ruby
+# "string/twice/core_ext.rb"
 class String
 	def twice
 		self + self
@@ -261,39 +270,8 @@ class String
 end
 ```
 
----
+<span class="code-presenting-annotation fragment current-only" data-code-focus="4-6,11-13">コードが重複している！！！</span>
 
-# 問題点
-
----
-
-```ruby
-module StringTwice
-	refine String do
-		def twice
-			self + self
-		end
-	end
-end
-```
-
-```ruby
-class String
-	def twice
-		self + self
-	end
-end
-```
-
-- - -
-
-```ruby
-def twice
-    self + self
-end
-```
-
-が重複してる!!!
 
 ---
 
@@ -301,14 +279,43 @@ end
 
 ---
 
-## 実装を module に切りだそう
+## 実装をモジュールに切りだそう
 
+↓ ↓ ↓
 >>>
 
-#### "string/twice.rb"
+#### 修正前
 - - -
 
 ```ruby
+# "string/twice.rb"
+module StringTwice
+	refine String do
+		def twice
+			self + self
+		end
+	end
+end
+```
+
+- - -
+
+```ruby
+# "string/twice/core_ext.rb"
+class String
+	def twice
+		self + self
+	end
+end
+```
+
+>>>
+
+#### 修正後
+- - -
+
+```ruby
+# "string/twice.rb"
 module StringTwice
 	def twice
 		self + self
@@ -320,16 +327,20 @@ module StringTwice
 end
 ```
 
-#### "string/twice/core_ext.rb"
 - - -
 
 ```ruby
+# "string/twice/core_ext.rb"
 require "string/twice"
 
 class String
 	include StringTwice
 end
 ```
+
+<span class="code-presenting-annotation fragment current-only" data-code-focus="3-5"></span>
+<span class="code-presenting-annotation fragment current-only" data-code-focus="8,15"></span>
+
 
 >>>
 
@@ -338,27 +349,34 @@ end
 
 * require "string/twice" した場合は using StringTwice で利用する             <!-- .element: class="fragment" -->
 * require "string/twice/core_ext" した場合は using を行わないで利用する             <!-- .element: class="fragment" -->
-* include StringTwice で任意のクラスに mixin することも出来る           <!-- .element: class="fragment" -->
+* include StringTwice で任意のクラスに mixin することも出来る           <!-- .element: class="fragment" style="color: #ff2222" -->
+* ただし、この実装でもいくつか問題点があるのでベストではない…    <!-- .element: class="fragment" -->
+  * この問題を解説するには時間が足りないのでまた別の機会に…
 
 
 ---
 
 ## Refinements 注意点
 - - -
-* Module オブジェクトに対して refine できない    <!-- .element: class="fragment" -->
+* refine 内で定義された特異メソッドは反映されない          <!-- .element: class="fragment" -->
+  * 特異クラスに対して refine する必要がある     <!-- .element: class="fragment" -->
+* モジュールオブジェクトに対して refine できない    <!-- .element: class="fragment" -->
   * → Ruby 2.4 で対応された                         <!-- .element: class="fragment" -->
-* Object#send で呼び出せない                <!-- .element: class="fragment" -->
-  * "homu".send :twice                <!-- .element: class="fragment" -->
-  * → Ruby 2.4 で対応された                <!-- .element: class="fragment" -->
 
+↓ ↓ ↓
 >>>
 
 ## Refinements 注意点 2
 - - -
+
+* Object#send で呼び出せない                <!-- .element: class="fragment" -->
+  * "homu".send :twice
+  * → Ruby 2.4 で対応された                <!-- .element: class="fragment" -->
+* #to_s が式展開("#{hoge}")で呼び出されない        <!-- .element: class="fragment" -->
+  * → Ruby 2.5 で対応予定        <!-- .element: class="fragment" -->
 * #respond_to? は false          <!-- .element: class="fragment" -->
   * "homu".respond_to? :twice # => false
-* 特異メソッドは反映されない          <!-- .element: class="fragment" -->
-  * 特異クラスに対して refine する必要がある
+* などなど、基本的に refine で定義したメソッドは Ruby 内部から呼び出されないことが多いです        <!-- .element: class="fragment" -->
 
 ---
 
@@ -375,6 +393,7 @@ end
 - - -
 
 * [RubyのRefinement（翻訳: 公式ドキュメントより）](https://techracho.bpsinc.jp/hachi8833/2017_03_23/37464)
+* [サンプルコードでわかる！Ruby 2.4の新機能と変更点 - Qiita](https://qiita.com/jnchito/items/9f9d45581816f121af07#refinements%E3%81%AB%E9%96%A2%E9%80%A3%E3%81%99%E3%82%8B%E6%96%B0%E6%A9%9F%E8%83%BD)
 
 ---
 
